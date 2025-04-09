@@ -1,5 +1,7 @@
 plugins {
-    id("dev.isxander.modstitch.base") version "0.5.12"
+    kotlin("jvm") version "2.1.20"
+    id("dev.isxander.modstitch.base") version "0.5.15-unstable"
+    id("dev.kikugie.stonecutter") version "0.6-beta.2"
 }
 
 fun cfg(name: String): String {
@@ -20,16 +22,25 @@ val mod_group = if (cfg("group") == "") "com.$mod_author.$mod_id" else cfg("grou
 val mod_description = cfg("description")
 val mod_license = cfg("license")
 
+//tasks {
+//    named<ProcessResources>("generateModMetadata") {
+//        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+//        dependsOn("stonecutterGenerate")
+//    }
+//
+//    named("compileKotlin") {
+//        dependsOn("stonecutterGenerate")
+//    }
+//
+//    processResources {
+//        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+//    }
+//}
+
 modstitch {
     minecraftVersion = minecraft
 
-    // Alternatively use stonecutter.eval if you have a lot of versions to target.
-    // https://stonecutter.kikugie.dev/stonecutter/guide/setup#checking-versions
-    javaTarget = when (minecraft) {
-        "1.20.1" -> 17
-        "1.21.4" -> 21
-        else -> throw IllegalArgumentException("Please store the java version for $minecraft in build.gradle.kts!")
-    }
+    javaTarget = if (stonecutter.eval(minecraft, ">=1.20.5")) 21 else 17
 
     // If parchment doesnt exist for a version yet you can safely
     // omit the "deps.parchment" property from your versioned gradle.properties
@@ -59,23 +70,27 @@ modstitch {
             // modstitch doesn't initially support. Some examples below.
             put(
                 "pack_format", when (minecraft) {
+                    "1.19.2" -> 9
                     "1.20.1" -> 15
-                    "1.21.4" -> 46
+                    "1.21.1" -> 34
                     else -> throw IllegalArgumentException("Please store the resource pack version for $minecraft in build.gradle.kts! https://minecraft.wiki/w/Pack_format")
                 }.toString()
             )
+            put("minecraft", minecraft)
+            put("forge", if (isForge) cfg("forge") else "")
         }
     }
 
     // Fabric Loom (Fabric)
-    loom {
-        // It's not recommended to store the Fabric Loader version in properties.
-        // Make sure its up to date.
-        fabricLoaderVersion = "0.16.10"
+    if (isFabric) loom {
+        fabricLoaderVersion = cfg("loader")
 
         // Configure loom like normal in this block.
         configureLoom {
-
+            runConfigs.configureEach {
+                ideConfigGenerated(true)
+                vmArgs.add("-Dmixin.debug.export=true")
+            }
         }
     }
 
@@ -93,7 +108,7 @@ modstitch {
         // you can configure MDG like normal from here
         configureNeoforge {
             runs.all {
-                disableIdeRun()
+                jvmArguments.add("-Dmixin.debug.export=true")
             }
         }
     }
@@ -128,7 +143,7 @@ stonecutter {
 // use the modstitch.createProxyConfigurations(sourceSets["client"]) function.
 dependencies {
     modstitch.loom {
-        modstitchModImplementation("net.fabricmc.fabric-api:fabric-api:0.112.0+1.21.4")
+        if (isFabric) modstitchModImplementation("net.fabricmc.fabric-api:fabric-api:${cfg("fabric")}+${minecraft}")
     }
 
     // Anything else in the dependencies block will be used for all platforms.

@@ -24,8 +24,8 @@ public class TitleScreenMixin {
         *///?}
 
         //? if 1.21.4 {
-        baseString = baseString.replace("%MINECRAFT%", "1.21.4");
-        //?} else if 1.20.1 {
+        /*baseString = baseString.replace("%MINECRAFT%", "1.21.4");
+        *///?} else if 1.20.1 {
         /*baseString = baseString.replace("%MINECRAFT", "1.20.1");
         *///?}
 
