@@ -1,7 +1,9 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     kotlin("jvm") version "2.1.20"
     id("dev.isxander.modstitch.base") version "0.5.15-unstable"
-    id("dev.kikugie.stonecutter") version "0.6-beta.2"
+    id("dev.kikugie.stonecutter") version "0.7-alpha.6"
 }
 
 fun cfg(name: String): String {
@@ -22,27 +24,31 @@ val mod_group = if (cfg("group") == "") "com.$mod_author.$mod_id" else cfg("grou
 val mod_description = cfg("description")
 val mod_license = cfg("license")
 
-//tasks {
-//    named<ProcessResources>("generateModMetadata") {
-//        duplicatesStrategy = DuplicatesStrategy.INCLUDE
-//        dependsOn("stonecutterGenerate")
-//    }
-//
-//    named("compileKotlin") {
-//        dependsOn("stonecutterGenerate")
-//    }
-//
-//    processResources {
-//        duplicatesStrategy = DuplicatesStrategy.INCLUDE
-//    }
-//}
+val java_version =
+    if (stonecutter.eval(minecraft, ">=1.20.5")) 21 else 17
+
+
+tasks {
+    named<ProcessResources>("generateModMetadata") {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+        dependsOn("stonecutterGenerate")
+    }
+
+    named("compileKotlin") {
+        dependsOn("stonecutterGenerate")
+    }
+
+    processResources {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
+}
 
 modstitch {
     minecraftVersion = minecraft
 
-    javaTarget = if (stonecutter.eval(minecraft, ">=1.20.5")) 21 else 17
+    javaTarget = java_version
 
-    // If parchment doesnt exist for a version yet you can safely
+    // If parchment doesn't exist for a version yet you can safely
     // omit the "deps.parchment" property from your versioned gradle.properties
 //    parchment {
 //        if (isFabric) {
@@ -124,16 +130,26 @@ modstitch {
 //        if (isForge) configs.register("$mod_id-forge")
 //        if (isNeoforge) configs.register("$mod_id-neoforge")
     }
+
+    kotlin {
+        jvmToolchain(java_version)
+        compilerOptions.jvmTarget.set(JvmTarget.valueOf("JVM_$java_version"))
+    }
+}
+
+java {
+    withSourcesJar()
+    targetCompatibility = JavaVersion.valueOf("VERSION_$java_version")
+    sourceCompatibility = JavaVersion.valueOf("VERSION_$java_version")
 }
 
 // Stonecutter constants for mod loaders.
-// See https://stonecutter.kikugie.dev/stonecutter/guide/comments#condition-constants
-var constraint: String = name.split("-")[1]
+val constraint: String = name.split("-")[1]
 stonecutter {
     consts(
-        "fabric" to constraint.equals("fabric"),
-        "neoforge" to constraint.equals("neoforge"),
-        "forge" to constraint.equals("forge"),
+        "fabric" to (constraint == "fabric"),
+        "neoforge" to (constraint == "neoforge"),
+        "forge" to (constraint == "forge"),
     )
 }
 
