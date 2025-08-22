@@ -1,5 +1,5 @@
 //? if neoforge {
-package com.author.example_mod.loaders.neoforge;
+/*package com.author.example_mod.loaders.neoforge;
 
 import com.author.example_mod.Main;
 import net.neoforged.fml.common.Mod;
@@ -10,4 +10,4 @@ public class Init {
         Main.init();
     }
 }
-//?}
+*///?}

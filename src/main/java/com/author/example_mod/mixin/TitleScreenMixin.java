@@ -15,7 +15,7 @@ public class TitleScreenMixin {
 
         /// https://stonecutter.kikugie.dev/stonecutter/guide/comments
         // See build.gradle for the registered swaps
-        String loader =  /*$ loader_string {*/"neoforge"/*$}*/;
+        String loader =  /*$ loader_string {*/"fabric"/*$}*/;
         String version = /*$ minecraft_version_string {*/"1.21.8"/*$}*/;
 
         baseString = baseString.replace("%LOADER%",loader);

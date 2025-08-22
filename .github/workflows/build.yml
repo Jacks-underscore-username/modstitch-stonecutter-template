@@ -1,0 +1,63 @@
+name: Build and Release Minecraft Mod
+
+on:
+  push:
+    branches:
+      - main
+  release:
+    types: [ published ]
+
+env:
+  JAVA_VERSION: '21'
+  GRADLE_BUILD_TASK: 'build'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: 'gradle'
+
+      - name: Grant Execute Permissions for Gradle Wrapper
+        run: chmod +x gradlew
+
+      - name: Build Mod (Stonecutter will handle multiple JARs)
+        run: ./gradlew ${{ env.GRADLE_BUILD_TASK }}
+
+      - name: Upload Mod JARs as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mod-jars
+          path: versions/*/build/libs/*.jar
+          retention-days: 1
+
+  release:
+    if: github.event_name == 'release' && github.event.action == 'published'
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Download all Mod JARs
+        uses: actions/download-artifact@v4
+        with:
+          name: mod-jars
+
+      - name: List Downloaded Files (for debugging)
+        run: ls -R
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: "*.jar"
+          prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
