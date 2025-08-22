@@ -7,7 +7,7 @@
   "environment": "*",
   "entrypoints": {
     "main": [
-      "com.author.example_mod.loaders.fabric.Init"
+      "${mod_group}.loaders.fabric.Init"
     ]
   }
 }

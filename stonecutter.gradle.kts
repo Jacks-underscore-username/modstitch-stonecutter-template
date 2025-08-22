@@ -1,7 +1,7 @@
 plugins {
-    id("dev.kikugie.stonecutter") version "0.7-alpha.6"
+    id("dev.kikugie.stonecutter") version "0.7.8"
 }
-stonecutter active "1.21.1-neoforge"
+stonecutter active "1.21.8-neoforge"
 
 allprojects {
     repositories {

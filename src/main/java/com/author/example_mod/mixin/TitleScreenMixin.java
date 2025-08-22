@@ -11,23 +11,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class TitleScreenMixin {
     @Inject(method = "init", at = @At("HEAD"))
     public void initMixinExample(CallbackInfo ci) {
-        String baseString = "Hello from %LOADER% on Minecraft %MINECRAFT%";
+        String baseString = "Hello from %LOADER% on Minecraft %VERSION%";
 
         /// https://stonecutter.kikugie.dev/stonecutter/guide/comments
+        // See build.gradle for the registered swaps
+        String loader =  /*$ loader_string {*/"neoforge"/*$}*/;
+        String version = /*$ minecraft_version_string {*/"1.21.8"/*$}*/;
 
-        //? if fabric {
-        /*baseString = baseString.replace("%LOADER%", "Fabric Loader");
-        *///?} else if neoforge {
-        baseString = baseString.replace("%LOADER%", "NeoForge");
-        //?} else {
-        /*baseString = baseString.replace("%LOADER%", "Legacy Forge");
-        *///?}
-
-        //? if 1.21.4 {
-        /*baseString = baseString.replace("%MINECRAFT%", "1.21.4");
-        *///?} else if 1.20.1 {
-        /*baseString = baseString.replace("%MINECRAFT", "1.20.1");
-        *///?}
+        baseString = baseString.replace("%LOADER%",loader);
+        baseString = baseString.replace("%VERSION%",version);
 
         Main.LOGGER.info(baseString);
     }

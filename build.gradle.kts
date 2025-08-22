@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     kotlin("jvm") version "2.1.20"
     id("dev.isxander.modstitch.base") version "0.5.15-unstable"
-    id("dev.kikugie.stonecutter") version "0.7-alpha.6"
+    id("dev.kikugie.stonecutter") version "0.7.8"
 }
 
 fun cfg(name: String): String {
@@ -14,8 +14,7 @@ val isFabric = property("modstitch.platform") == "loom"
 val isForge = property("modstitch.platform") == "moddevgradle-legacy"
 val isNeoforge = property("modstitch.platform") == "moddevgradle-regular"
 
-val minecraft = cfg("minecraft")
-
+val minecraft_version = cfg("minecraft")
 val mod_name = cfg("name")
 val mod_id = cfg("id")
 val mod_version = cfg("version")
@@ -23,9 +22,10 @@ val mod_author = cfg("author")
 val mod_group = if (cfg("group") == "") "com.$mod_author.$mod_id" else cfg("group")
 val mod_description = cfg("description")
 val mod_license = cfg("license")
-
+val loader: String = name.split("-")[1]
 val java_version =
-    if (stonecutter.eval(minecraft, ">=1.20.5")) 21 else 17
+    if (stonecutter.eval(minecraft_version, ">=1.20.5")) 21 else 17
+
 
 
 tasks {
@@ -44,7 +44,7 @@ tasks {
 }
 
 modstitch {
-    minecraftVersion = minecraft
+    minecraftVersion = minecraft_version
 
     javaTarget = java_version
 
@@ -72,17 +72,17 @@ modstitch {
         }
 
         replacementProperties.populate {
-            // You can put any other replacement properties/metadata here that
-            // modstitch doesn't initially support. Some examples below.
             put(
-                "pack_format", when (minecraft) {
+                "pack_format", when (minecraft_version) {
                     "1.19.2" -> 9
                     "1.20.1" -> 15
                     "1.21.1" -> 34
-                    else -> throw IllegalArgumentException("Please store the resource pack version for $minecraft in build.gradle.kts! https://minecraft.wiki/w/Pack_format")
+                    "1.21.4" -> 46
+                    "1.21.8" -> 64
+                    else -> throw IllegalArgumentException("Please store the resource pack version for $minecraft_version in build.gradle.kts! https://minecraft.wiki/w/Pack_format")
                 }.toString()
             )
-            put("minecraft", minecraft)
+            put("minecraft", minecraft_version)
             put("forge", if (isForge) cfg("forge") else "")
         }
     }
@@ -103,7 +103,7 @@ modstitch {
     // ModDevGradle (NeoForge, Forge, Forgelike)
     moddevgradle {
         enable {
-            if (isModDevGradleLegacy) forgeVersion = "${minecraft}-${cfg("forge")}"
+            if (isModDevGradleLegacy) forgeVersion = "${minecraft_version}-${cfg("forge")}"
             if (isModDevGradleRegular) neoForgeVersion = cfg("neoforge")
         }
 
@@ -125,10 +125,6 @@ modstitch {
         addMixinsToModManifest = true
 
         configs.register(mod_id)
-
-//        if (isFabric) configs.register("$mod_id-fabric")
-//        if (isForge) configs.register("$mod_id-forge")
-//        if (isNeoforge) configs.register("$mod_id-neoforge")
     }
 
     kotlin {
@@ -143,14 +139,31 @@ java {
     sourceCompatibility = JavaVersion.valueOf("VERSION_$java_version")
 }
 
-// Stonecutter constants for mod loaders.
-val constraint: String = name.split("-")[1]
+// Add loads of info to stonecutter for use in the actual code
 stonecutter {
-    consts(
-        "fabric" to (constraint == "fabric"),
-        "neoforge" to (constraint == "neoforge"),
-        "forge" to (constraint == "forge"),
+    // Makes the loader comparable for stonecutter comments
+    constants.match(
+        loader,
+        "fabric",
+        "neoforge",
+        "forge",
     )
+
+    // Adds swaps so the java side can see all the config if needed
+    fun swap (name: String, value: String){
+        swaps["${name}_string"] = "\"${value}\""
+        swaps[name]=value
+    }
+    swap("minecraft_version",minecraft_version)
+    swap("mod_name",mod_name)
+    swap("mod_id",mod_id)
+    swap("mod_version",mod_version)
+    swap("mod_author",mod_author)
+    swap("mod_group",mod_group)
+    swap("mod_description",mod_description)
+    swap("mod_license",mod_license)
+    swap("loader",loader)
+    swap("java_version",java_version.toString())
 }
 
 // All dependencies should be specified through modstitch's proxy configuration.
@@ -159,8 +172,6 @@ stonecutter {
 // use the modstitch.createProxyConfigurations(sourceSets["client"]) function.
 dependencies {
     modstitch.loom {
-        if (isFabric) modstitchModImplementation("net.fabricmc.fabric-api:fabric-api:${cfg("fabric")}+${minecraft}")
+        if (isFabric) modstitchModImplementation("net.fabricmc.fabric-api:fabric-api:${cfg("fabric")}+${minecraft_version}")
     }
-
-    // Anything else in the dependencies block will be used for all platforms.
 }
