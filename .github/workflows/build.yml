@@ -5,11 +5,12 @@ on:
     branches:
       - main
   release:
-    types: [ published ]
+    types: [published]
 
 env:
   JAVA_VERSION: '21'
   GRADLE_BUILD_TASK: 'build'
+  ARTIFACT_STAGING_DIR: './artifacts_to_upload'
 
 jobs:
   build:
@@ -29,15 +30,28 @@ jobs:
       - name: Grant Execute Permissions for Gradle Wrapper
         run: chmod +x gradlew
 
-      - name: Build Mod (Stonecutter will handle multiple JARs)
+      - name: Build Mod
         run: ./gradlew ${{ env.GRADLE_BUILD_TASK }}
 
-      - name: Upload Mod JARs as Artifact
+      - name: Create Staging Directory
+        run: mkdir -p ${{ env.ARTIFACT_STAGING_DIR }}
+
+      - name: Collect Main Mod JARs into Staging Directory
+        run: |
+          find versions -type f -path "*/build/libs/*.jar" \
+            ! -name "*-sources.jar" \
+            ! -name "*-javadoc.jar" \
+            -exec cp {} ${{ env.ARTIFACT_STAGING_DIR }}/ \;
+
+      - name: List Staged Files
+        run: ls -l ${{ env.ARTIFACT_STAGING_DIR }}
+
+      - name: Upload Flattened Mod JARs as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: mod-jars
-          path: versions/*/build/libs/*.jar
-          retention-days: 1
+          path: ${{ env.ARTIFACT_STAGING_DIR }}/
+          retention-days: 7
 
   release:
     if: github.event_name == 'release' && github.event.action == 'published'
@@ -45,12 +59,12 @@ jobs:
     needs: build
 
     steps:
-      - name: Download all Mod JARs
+      - name: Download all Flattened Mod JARs
         uses: actions/download-artifact@v4
         with:
           name: mod-jars
 
-      - name: List Downloaded Files (for debugging)
+      - name: List Downloaded Files
         run: ls -R
 
       - name: Create GitHub Release
@@ -60,4 +74,4 @@ jobs:
           files: "*.jar"
           prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.secrets.GITHUB_TOKEN }}

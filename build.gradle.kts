@@ -50,12 +50,12 @@ modstitch {
 
     // If parchment doesn't exist for a version yet you can safely
     // omit the "deps.parchment" property from your versioned gradle.properties
-//    parchment {
+    parchment {
 //        if (isFabric) {
 //            mappingsVersion = cfg("parchment")
 //        }
-////        prop("deps.parchment") { mappingsVersion = it }
-//    }
+//        mappingsVersion = cfg("parchment")
+    }
 
     // This metadata is used to fill out the information inside
     // the metadata files found in the templates folder.

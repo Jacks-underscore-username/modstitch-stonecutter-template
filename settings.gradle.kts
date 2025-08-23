@@ -18,6 +18,9 @@ pluginManagement {
 
         // Modstitch
         maven("https://maven.isxander.dev/releases")
+
+        // Parchment
+        maven("https://maven.parchmentmc.org")
     }
 }
 
