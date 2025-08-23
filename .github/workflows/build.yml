@@ -1,4 +1,4 @@
-name: Build and Release Minecraft Mod
+name: Build / Release Minecraft Mod
 
 on:
   push:
@@ -36,17 +36,35 @@ jobs:
       - name: Create Staging Directory
         run: mkdir -p ${{ env.ARTIFACT_STAGING_DIR }}
 
-      - name: Collect Main Mod JARs into Staging Directory
+      - name: Collect and Rename JARs
         run: |
+          # Use find to list desired JARs, then loop through them
           find versions -type f -path "*/build/libs/*.jar" \
             ! -name "*-sources.jar" \
-            ! -name "*-javadoc.jar" \
-            -exec cp {} ${{ env.ARTIFACT_STAGING_DIR }}/ \;
+            ! -name "*-javadoc.jar" | while read -r jar_path; do
+
+            # Extract the Minecraft version from the path
+            # Example: versions/1.20.1/build/libs/mymod-1.0.0.jar -> 1.20.1
+            mc_version=$(echo "$jar_path" | sed -n 's|versions/\([^/]*\)/.*|\1|p')
+
+            # Extract the original JAR filename
+            # Example: mymod-1.0.0.jar
+            original_filename=$(basename "$jar_path")
+
+            # Construct the new filename: [VERSION]-[OriginalFilename]
+            # Example: 1.20.1-mymod-1.0.0.jar
+            new_filename="${mc_version}-${original_filename}"
+
+            echo "Renaming '$original_filename' (from MC $mc_version) to '$new_filename'"
+
+            # Copy and rename to the staging directory
+            cp "$jar_path" "${{ env.ARTIFACT_STAGING_DIR }}/$new_filename"
+          done
 
       - name: List Staged Files
         run: ls -l ${{ env.ARTIFACT_STAGING_DIR }}
 
-      - name: Upload Flattened Mod JARs as Artifact
+      - name: Upload JARs
         uses: actions/upload-artifact@v4
         with:
           name: mod-jars
@@ -59,19 +77,19 @@ jobs:
     needs: build
 
     steps:
-      - name: Download all Flattened Mod JARs
+      - name: Download JARs
         uses: actions/download-artifact@v4
         with:
           name: mod-jars
 
-      - name: List Downloaded Files
+      - name: List Downloaded Files (for debugging)
         run: ls -R
 
-      - name: Create GitHub Release
+      - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v1
         with:
           files: "*.jar"
           prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
         env:
-          GITHUB_TOKEN: ${{ secrets.secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
