@@ -1,32 +1,56 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.HashMap
 
 plugins {
     kotlin("jvm") version "2.1.20"
-    id("dev.isxander.modstitch.base") version "0.5.15-unstable"
+    id("dev.isxander.modstitch.base") version "0.7.0-unstable"
     id("dev.kikugie.stonecutter") version "0.7.8"
 }
 
 fun cfg(name: String): String {
-    return property("cfg.${name}") as String
+    return try {
+        property("cfg.${name}") as String
+    } catch (e: Exception) {
+        ""
+    }
 }
+val config = HashMap<String, String>()
 
-val isFabric = property("modstitch.platform") == "loom"
-val isForge = property("modstitch.platform") == "moddevgradle-legacy"
-val isNeoforge = property("modstitch.platform") == "moddevgradle-regular"
+val is_fabric = property("modstitch.platform") == "loom"
+config["is_fabric"] = is_fabric.toString()
+val is_forge = property("modstitch.platform") == "moddevgradle-legacy"
+config["is_forge"] = is_forge.toString()
+val is_neoforge = property("modstitch.platform") == "moddevgradle-regular"
+config["is_neoforge"] = is_neoforge.toString()
 
 val minecraft_version = cfg("minecraft")
+config["minecraft_version"] = minecraft_version
 val mod_name = cfg("name")
+config["mod_name"] = mod_name
 val mod_id = cfg("id")
+config["mod_id"] = mod_id
 val mod_version = cfg("version")
+config["mod_version"] = mod_version
 val mod_author = cfg("author")
+config["mod_author"] = mod_author
 val mod_group = if (cfg("group") == "") "com.$mod_author.$mod_id" else cfg("group")
+config["mod_group"] = mod_group
 val mod_description = cfg("description")
+config["mod_description"] = mod_description
 val mod_license = cfg("license")
+config["mod_license"] = mod_license
 val loader: String = name.split("-")[1]
-val java_version =
-    if (stonecutter.eval(minecraft_version, ">=1.20.5")) 21 else 17
-
-
+config["loader"] = loader
+val fabric_loader = cfg("loader")
+config["fabric_loader"] = fabric_loader
+val fabric_version = cfg("fabric")
+config["fabric_version"] = fabric_version
+val forge_version = cfg("forge")
+config["forge_version"] = forge_version
+val neoforge_version = cfg("neoforge")
+config["neoforge_version"] = neoforge_version
+val java_version = if (stonecutter.eval(minecraft_version, ">=1.20.5")) 21 else 17
+config["java_version"] = java_version.toString()
 
 tasks {
     named<ProcessResources>("generateModMetadata") {
@@ -45,8 +69,6 @@ tasks {
 
 modstitch {
     minecraftVersion = minecraft_version
-
-    javaTarget = java_version
 
     // If parchment doesn't exist for a version yet you can safely
     // omit the "deps.parchment" property from your versioned gradle.properties
@@ -74,7 +96,9 @@ modstitch {
         replacementProperties.populate {
             put(
                 "pack_format", when (minecraft_version) {
-                    "1.19.2" -> 9
+                    "1.16.5" -> 6
+                    "1.18.2" -> 9
+                    "1.19.2" -> 10
                     "1.20.1" -> 15
                     "1.21.1" -> 34
                     "1.21.4" -> 46
@@ -82,14 +106,14 @@ modstitch {
                     else -> throw IllegalArgumentException("Please store the resource pack version for $minecraft_version in build.gradle.kts! https://minecraft.wiki/w/Pack_format")
                 }.toString()
             )
-            put("minecraft", minecraft_version)
-            put("forge", if (isForge) cfg("forge") else "")
+            for (entry in config.entries)
+                put(entry.key, entry.value)
         }
     }
 
     // Fabric Loom (Fabric)
-    if (isFabric) loom {
-        fabricLoaderVersion = cfg("loader")
+    if (is_fabric) loom {
+        fabricLoaderVersion = fabric_loader
 
         // Configure loom like normal in this block.
         configureLoom {
@@ -102,17 +126,13 @@ modstitch {
 
     // ModDevGradle (NeoForge, Forge, Forgelike)
     moddevgradle {
-        enable {
-            if (isModDevGradleLegacy) forgeVersion = "${minecraft_version}-${cfg("forge")}"
-            if (isModDevGradleRegular) neoForgeVersion = cfg("neoforge")
-        }
+            if (isModDevGradleLegacy) forgeVersion = "${minecraft_version}-${forge_version}"
+            if (isModDevGradleRegular) neoForgeVersion = neoforge_version
 
         // Configures client and server runs for MDG, it is not done by default
         defaultRuns()
 
-        // This block configures the `neoforge` extension that MDG exposes by default,
-        // you can configure MDG like normal from here
-        configureNeoforge {
+        configureNeoForge {
             runs.all {
                 jvmArguments.add("-Dmixin.debug.export=true")
             }
@@ -154,16 +174,8 @@ stonecutter {
         swaps["${name}_string"] = "\"${value}\""
         swaps[name]=value
     }
-    swap("minecraft_version",minecraft_version)
-    swap("mod_name",mod_name)
-    swap("mod_id",mod_id)
-    swap("mod_version",mod_version)
-    swap("mod_author",mod_author)
-    swap("mod_group",mod_group)
-    swap("mod_description",mod_description)
-    swap("mod_license",mod_license)
-    swap("loader",loader)
-    swap("java_version",java_version.toString())
+    for (entry in config.entries)
+        swap(entry.key, entry.value)
 }
 
 // All dependencies should be specified through modstitch's proxy configuration.
@@ -172,6 +184,9 @@ stonecutter {
 // use the modstitch.createProxyConfigurations(sourceSets["client"]) function.
 dependencies {
     modstitch.loom {
-        if (isFabric) modstitchModImplementation("net.fabricmc.fabric-api:fabric-api:${cfg("fabric")}+${minecraft_version}")
+        if (is_fabric)
+            modstitchModImplementation("net.fabricmc.fabric-api:fabric-api:${cfg("fabric")}+${minecraft_version}")
+        if (is_neoforge)
+            modstitchModImplementation("net.neoforged:neoforge:${neoforge_version}")
     }
 }

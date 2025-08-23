@@ -42,10 +42,11 @@ stonecutter {
 
         // Configure your targets here!
         mc("1.21.8", loaders = listOf("fabric", "neoforge"))
-//        mc("1.21.4", loaders = listOf("fabric", "neoforge"))
-//        mc("1.21.1", loaders = listOf("fabric", "neoforge"))
-//        mc("1.20.1", loaders = listOf("fabric", "forge"))
-//        mc("1.19.2", loaders = listOf("fabric", "forge"))
+        mc("1.21.4", loaders = listOf("fabric", "neoforge"))
+        mc("1.21.1", loaders = listOf("fabric", "neoforge"))
+        mc("1.20.1", loaders = listOf("fabric", "forge"))
+        mc("1.19.2", loaders = listOf("fabric", "forge"))
+        mc("1.18.2", loaders = listOf("fabric", "forge"))
 
         // This is the default target.
         vcsVersion = "1.21.8-fabric"
